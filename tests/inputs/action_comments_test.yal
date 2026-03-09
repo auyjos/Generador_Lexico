@@ -1,0 +1,26 @@
+(* action_comments_test.yal
+   Verifica que los comentarios (* *) dentro de bloques { }
+   se preservan intacto, igual que Flex preserva /* */ en acciones C.
+*)
+
+{
+(* Este comentario está dentro del header y NO se debe eliminar *)
+import myToken
+}
+
+(* Este comentario entre header y definitions SÍ se elimina *)
+let digit = ['0'-'9']
+let letter = ['a'-'z''A'-'Z']
+
+(* Comentario entre definitions y rule se elimina *)
+
+rule tokens =
+    digit+          { (* acción con comentario OCaml *) return NUM }
+  | letter+         { return ID (* identificador *) }
+  | [' ''\t''\n']  { (* skip whitespace *) }
+  | '+'             { return PLUS }
+
+{
+(* Trailer con comentario que debe preservarse *)
+print("done")
+}

@@ -1,0 +1,21 @@
+(* comments_test.yal — Prueba de manejo de comentarios *)
+
+(* Este es un comentario de una línea *)
+
+{
+(* Comentario dentro del header no se permite, viene antes *)
+import myToken
+}
+
+(* Definiciones con comentarios intercalados *)
+let digit = ['0'-'9']
+(* let ignorado = "esto no se ve" *)
+let letter = ['a'-'z''A'-'Z']
+
+(* Reglas con comentarios *)
+rule tokens =
+    letter (letter | digit)*  { return ID }
+  | digit+                     { return NUM }
+  (* Esta regla maneja el operador de asignación *)
+  | '='                        { return ASSIGN }
+  | [' ' '\t' '\n']+          { return SKIP }

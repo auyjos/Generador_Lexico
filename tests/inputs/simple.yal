@@ -1,0 +1,10 @@
+(* simple.yal — Especificación mínima para pruebas rápidas *)
+
+let digit = ['0'-'9']
+let letter = ['a'-'z''A'-'Z']
+
+rule gettoken =
+    letter (letter | digit)*   { return ID }
+  | digit+ ('.' digit+)?      { return NUM }
+  | '='                        { return ASSIGN }
+  | [' ' '\t' '\n']+          { return SKIP }

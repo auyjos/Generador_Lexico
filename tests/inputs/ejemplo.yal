@@ -1,0 +1,27 @@
+(* ejemplo.yal — Especificación léxica de prueba *)
+
+{
+import myToken
+}
+
+let digit = ['0'-'9']
+let letter = ['a'-'z''A'-'Z']
+let id = letter (letter | digit)*
+let number = digit+ ('.' digit+)?
+
+rule tokens =
+    [' ' '\t']+         { return WHITESPACE }
+  | ['\n']              { return NEWLINE }
+  | number              { return NUM }
+  | id                  { return ID }
+  | '='                 { return ASSIGN }
+  | '+'                 { return PLUS }
+  | '-'                 { return MINUS }
+  | '*'                 { return TIMES }
+  | '/'                 { return DIV }
+  | '('                 { return LPAREN }
+  | ')'                 { return RPAREN }
+
+{
+print("Trailer: análisis completado")
+}

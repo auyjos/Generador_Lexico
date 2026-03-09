@@ -1,0 +1,35 @@
+(* edge_test.yal — Pruebas de funcionalidad avanzada *)
+(* Cubre: _, #, [^set], "string", eof, definiciones anidadas *)
+
+{
+(* header con (* comentario anidado *) dentro *)
+import advancedToken
+}
+
+(* Definiciones con referencias cruzadas *)
+let digit = ['0'-'9']
+let letter = ['a'-'z''A'-'Z']
+let alphanum = letter | digit
+let id = letter alphanum*
+let number = digit+ ('.' digit+)?
+
+(* Operador diferencia # y complemento [^set] *)
+let not_quote = [^'"']
+let printable = [' '-'~']
+let non_space = printable # [' ']
+
+rule lexer =
+    id                  { return ID }
+  | number              { return NUM }
+  | "if"                { return IF }
+  | "else"              { return ELSE }
+  | '"' not_quote* '"'  { return STRING }
+  | [^' ''\t''\n']      { return OTHER }
+  | _                   { return ANY_CHAR }
+  | [' ''\t''\n']+     { (* skip *) }
+  | eof                 { return EOF_TOKEN }
+
+{
+(* trailer *)
+print("Análisis completado")
+}
