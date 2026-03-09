@@ -48,6 +48,10 @@ $RECYCLE.BIN/
 .AppleDouble
 .LSOverride
 
+# Markdown (except README)
+*.md
+!README.md
+
 # Linux
 *~
 
