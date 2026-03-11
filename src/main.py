@@ -11,10 +11,12 @@ import sys
 # Agregar el directorio raíz del proyecto al path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.lexer.dfa import DFAError, build_dfa, minimize_dfa
+from src.lexer.nfa import NFAError, build_nfa
 from src.lexer.regex_parser import ParserError, YALexParser
 from src.lexer.resolver import DefinitionResolver, ResolverError
 from src.lexer.scanner import Scanner, ScannerError
-from src.utils.visualizer import render_resolved_spec
+from src.utils.visualizer import render_resolved_spec, render_automata
 
 
 def main() -> None:
@@ -46,6 +48,32 @@ def main() -> None:
         path = render_resolved_spec(resolved_spec, output_dir="output")
         print(f">>> Imagen guardada en: {path}\n")
 
+        # ── Módulo 4: Constructor de NFA (Thompson) ──
+        print("\n>>> Construyendo NFA (Thompson's construction)...")
+        nfa = build_nfa(resolved_spec)
+        print(nfa.pretty_print())
+
+        # ── Módulo 5: Constructor de DFA (construcción de subconjuntos) ──
+        print("\n>>> Construyendo DFA (subset construction)...")
+        dfa = build_dfa(nfa)
+        print(dfa.pretty_print(title="DFA (sin minimizar)"))
+
+        # ── Módulo 6: Minimización de Hopcroft ──
+        print("\n>>> Minimizando DFA (algoritmo de Hopcroft)...")
+        min_dfa = minimize_dfa(dfa)
+        print(min_dfa.pretty_print(title="DFA Minimizado (Hopcroft)"))
+
+        print(f"\n>>> Pipeline completo:")
+        print(f"    NFA : {len(nfa.states)} estados")
+        print(f"    DFA : {len(dfa.states)} estados")
+        print(f"    DFA minimizado: {len(min_dfa.states)} estados\n")
+        # ── Visualización: imágenes de autómatas ──
+        print("\n>>> Generando imágenes de autómatas...")
+        auto_paths = render_automata(nfa, dfa, min_dfa, output_dir="output")
+        print(f">>> NFA guardado en:          {auto_paths['nfa']}")
+        print(f">>> DFA guardado en:          {auto_paths['dfa']}")
+        print(f">>> DFA minimizado guardado en: {auto_paths['min_dfa']}")
+
     except ScannerError as e:
         print(f"\n[ERROR del Procesador] {e}", file=sys.stderr)
         sys.exit(1)
@@ -54,6 +82,12 @@ def main() -> None:
         sys.exit(1)
     except ResolverError as e:
         print(f"\n[ERROR del Resolvedor] {e}", file=sys.stderr)
+        sys.exit(1)
+    except NFAError as e:
+        print(f"\n[ERROR del NFA] {e}", file=sys.stderr)
+        sys.exit(1)
+    except DFAError as e:
+        print(f"\n[ERROR del DFA] {e}", file=sys.stderr)
         sys.exit(1)
 
 
