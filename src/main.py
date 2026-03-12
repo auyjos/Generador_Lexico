@@ -11,6 +11,7 @@ import sys
 # Agregar el directorio raíz del proyecto al path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.lexer.codegen import CodeGenError, generate_lexer
 from src.lexer.dfa import DFAError, build_dfa, minimize_dfa
 from src.lexer.nfa import NFAError, build_nfa
 from src.lexer.regex_parser import ParserError, YALexParser
@@ -74,6 +75,12 @@ def main() -> None:
         print(f">>> DFA guardado en:          {auto_paths['dfa']}")
         print(f">>> DFA minimizado guardado en: {auto_paths['min_dfa']}")
 
+        # ── Módulo 8: Generador de Código ──
+        lexer_out = os.path.join("output", "lexer.py")
+        print(f"\n>>> Generando lexer en: {lexer_out}")
+        generate_lexer(min_dfa, resolved_spec, output_path=lexer_out)
+        print(f">>> Lexer generado exitosamente.\n")
+
     except ScannerError as e:
         print(f"\n[ERROR del Procesador] {e}", file=sys.stderr)
         sys.exit(1)
@@ -88,6 +95,9 @@ def main() -> None:
         sys.exit(1)
     except DFAError as e:
         print(f"\n[ERROR del DFA] {e}", file=sys.stderr)
+        sys.exit(1)
+    except CodeGenError as e:
+        print(f"\n[ERROR del Generador] {e}", file=sys.stderr)
         sys.exit(1)
 
 

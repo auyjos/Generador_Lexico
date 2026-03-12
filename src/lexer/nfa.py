@@ -193,7 +193,7 @@ class NFA:
 def _symbol_str(symbol) -> str:
     """Representación legible de un símbolo de transición."""
     if symbol is EPSILON:
-        return "ε"
+        return "eps"
     if isinstance(symbol, int):
         c = chr(symbol)
         if c.isprintable() and c != " ":

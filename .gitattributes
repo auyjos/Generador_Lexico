@@ -1,0 +1,8 @@
+# Normalizar saltos de línea
+* text=auto
+
+# Forzar LF en archivos de texto del proyecto
+*.py text eol=lf
+*.yal text eol=lf
+*.txt text eol=lf
+*.md  text eol=lf
