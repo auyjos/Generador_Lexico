@@ -148,6 +148,8 @@ class DFA:
 
 
 def _sym_label(sym: int) -> str:
+    if sym == -1:
+        return "EOF"
     c = chr(sym)
     if c.isprintable() and c not in (" ", "\t", "\n"):
         return c

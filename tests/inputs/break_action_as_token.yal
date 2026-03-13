@@ -1,0 +1,13 @@
+(* break_action_as_token.yal
+   BUG CONOCIDO: si la acción no tiene "return", el texto completo
+   de la acción se usa como nombre del TokenType en Java.
+   Ejemplo: "(* skip whitespace *)" se convierte en un enum inválido.
+   Este archivo prueba ese bug. *)
+
+let digit  = ['0'-'9']
+let letter = ['a'-'z''A'-'Z']
+
+rule tokens =
+    [' ' '\t' '\n']+           { (* skip whitespace *) }
+  | digit+                      { return NUM }
+  | letter+                     { return ID }

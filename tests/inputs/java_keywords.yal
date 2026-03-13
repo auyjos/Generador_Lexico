@@ -1,0 +1,35 @@
+(* java_keywords.yal — Lexer que reconoce keywords de Java.
+   Prueba: strings literales largos, muchas reglas, precedencia por orden. *)
+
+let digit  = ['0'-'9']
+let letter = ['a'-'z''A'-'Z''_']
+
+rule tokens =
+    "if"                            { return IF }
+  | "else"                          { return ELSE }
+  | "while"                         { return WHILE }
+  | "for"                           { return FOR }
+  | "return"                        { return RETURN }
+  | "int"                           { return INT }
+  | "float"                         { return FLOAT_KW }
+  | "void"                          { return VOID }
+  | "class"                         { return CLASS }
+  | "public"                        { return PUBLIC }
+  | "static"                        { return STATIC }
+  | letter (letter | digit)*       { return IDENT }
+  | digit+                          { return INTEGER }
+  | digit+ '.' digit+              { return DECIMAL }
+  | '+'                             { return PLUS }
+  | '-'                             { return MINUS }
+  | '*'                             { return STAR }
+  | '/'                             { return SLASH }
+  | '('                             { return LPAREN }
+  | ')'                             { return RPAREN }
+  | '{'                             { return LBRACE }
+  | '}'                             { return RBRACE }
+  | ';'                             { return SEMICOLON }
+  | ','                             { return COMMA }
+  | '.'                             { return DOT }
+  | '='                             { return ASSIGN }
+  | [' ' '\t']+                    { return WS }
+  | ['\n']                          { return NEWLINE }

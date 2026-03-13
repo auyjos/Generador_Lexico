@@ -1,0 +1,23 @@
+(* break_long_chain.yal
+   STRESS TEST: cadena larga de definiciones que se referencian entre sí.
+   Prueba la resolución topológica de muchas dependencias. *)
+
+let d = ['0'-'9']
+let l = ['a'-'z']
+let u = ['A'-'Z']
+let alpha = {l} | {u}
+let alnum = {alpha} | {d}
+let id_start = {alpha} | '_'
+let id_body = {alnum} | '_'
+let identifier = {id_start} {id_body}*
+let integer = {d}+
+let decimal = {integer} '.' {integer}
+let number = {integer} | {decimal}
+
+rule tokens =
+    {identifier}   { return ID }
+  | {number}       { return NUM }
+  | '+'            { return PLUS }
+  | '-'            { return MINUS }
+  | '*'            { return TIMES }
+  | [' ' '\t' '\n']+ { return WS }

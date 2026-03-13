@@ -224,6 +224,8 @@ class RegexTokenizer:
             elif ch == "#":
                 self.tokens.append(Token(TokType.HASH, pos=self.pos))
                 self.pos += 1
+            elif ch == "{":
+                self._read_brace_ref()
             elif ch.isalpha() or ch == "_":
                 self._read_identifier()
             else:
@@ -357,6 +359,25 @@ class RegexTokenizer:
                               pos=start, context=self.context)
         self.pos += 1  # saltar '
         return ord(ch)
+
+    # ── Referencia con llaves {ident} ───────────────────────────────────
+
+    def _read_brace_ref(self) -> None:
+        """Lee {identificador} como referencia a una definición let."""
+        start = self.pos
+        self.pos += 1  # saltar {
+        name_start = self.pos
+        while (self.pos < len(self.text)
+               and (self.text[self.pos].isalnum() or self.text[self.pos] == "_")):
+            self.pos += 1
+        name = self.text[name_start:self.pos]
+        if not name or self.pos >= len(self.text) or self.text[self.pos] != "}":
+            raise ParserError(
+                "Se esperaba un identificador seguido de '}' después de '{'",
+                pos=start, context=self.context,
+            )
+        self.pos += 1  # saltar }
+        self.tokens.append(Token(TokType.REF, value=name, pos=start))
 
     # ── Identificadores y palabras clave ─────────────────────────────────
 

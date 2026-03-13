@@ -1,0 +1,18 @@
+(* break_duplicate_tokens.yal
+   CASO LÍMITE: múltiples reglas producen el mismo token.
+   ¿Se duplica en el enum? ¿Se maneja correctamente la precedencia? *)
+
+let digit  = ['0'-'9']
+let lower  = ['a'-'z']
+let upper  = ['A'-'Z']
+
+rule tokens =
+    lower+    { return ID }
+  | upper+    { return ID }
+  | digit+    { return NUM }
+  | digit+    { return NUM }
+  | '+'       { return OP }
+  | '-'       { return OP }
+  | '*'       { return OP }
+  | '/'       { return OP }
+  | [' ' '\t' '\n']+ { return WS }

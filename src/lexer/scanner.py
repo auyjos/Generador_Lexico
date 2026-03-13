@@ -279,10 +279,9 @@ class Scanner:
 
             # ¿Es inicio de trailer { … } sin patrón previo?
             if pos < length and text[pos] == "{":
-                # Mirar si es una acción (pertenece a algún patrón) o un trailer.
-                # Un trailer aparece cuando NO hay patrón antes.
-                # Si acabamos de leer un '|' o estamos al inicio, podría ser trailer.
-                if self._looks_like_trailer(text, pos):
+                # Si es una referencia a definición {identificador}, no es trailer
+                ref_match = re.match(r'\{\w+\}', text[pos:])
+                if not ref_match and self._looks_like_trailer(text, pos):
                     break
 
             if pos >= length:
@@ -441,6 +440,7 @@ class Scanner:
         """
         Lee un patrón de regla hasta encontrar el inicio de su acción '{'.
         Respeta agrupadores, comillas y corchetes.
+        Distingue {identificador} (referencia a definición) de { acción }.
         """
         parts: list[str] = []
         depth_paren = 0
@@ -452,6 +452,14 @@ class Scanner:
 
             # Inicio de acción (fuera de agrupadores)
             if ch == "{" and depth_paren == 0 and depth_bracket == 0:
+                # Distinguir {ref} (referencia) de { action } (acción)
+                m = re.match(r'\{(\w+)\}', text[pos:])
+                if m:
+                    # Es una referencia a definición → incluir en patrón
+                    ref_text = m.group(0)
+                    parts.append(ref_text)
+                    pos += len(ref_text)
+                    continue
                 break
 
             if ch == "(":

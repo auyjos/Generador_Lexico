@@ -283,11 +283,15 @@ def _compact_ranges(codes: list[int]) -> str:
 
 
 def _safe_char(code: int) -> str:
+    if code == -1:
+        return "EOF"
     ch = chr(code)
     if ch == "\n": return "\\n"
     if ch == "\t": return "\\t"
     if ch == "\r": return "\\r"
     if ch == " ":  return "' '"
+    if ch == "\\": return "\\\\"
+    if ch == '"':  return '\\"'
     if ch.isprintable(): return ch
     return f"\\x{code:02x}"
 
@@ -403,6 +407,10 @@ def _edge_label_nfa(symbol) -> str:
         if symbol == -1:
             return "EOF"
         c = chr(symbol)
+        if c == "\\":
+            return "\\\\"
+        if c == '"':
+            return '\\"'
         if c.isprintable() and c not in (" ", "\t", "\n"):
             return c
         return f"\\x{symbol:02x}"

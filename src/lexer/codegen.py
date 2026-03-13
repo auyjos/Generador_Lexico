@@ -14,6 +14,7 @@ Salida:   archivo .java del analizador léxico generado
 from __future__ import annotations
 
 import os
+import re
 import textwrap
 from datetime import datetime
 
@@ -434,16 +435,24 @@ def _extract_token_name(action: str) -> str:
     Ejemplos:
         "return WHITESPACE"  →  "WHITESPACE"
         "return ID"          →  "ID"
-        "return NUM"         →  "NUM"
-        "skip"               →  "skip"
+        "(* skip whitespace *)"  →  "__SKIP__"
     """
-    action = action.strip()
-    lower  = action.lower()
+    # Eliminar comentarios OCaml (* ... *)
+    action = re.sub(r'\(\*.*?\*\)', '', action).strip()
+
+    if not action:
+        return "__SKIP__"
+
+    lower = action.lower()
     if lower.startswith("return"):
         rest  = action[6:].strip()
         token = rest.split()[0] if rest.split() else action
         return token.rstrip(";")
-    return action
+
+    # Acción sin 'return' → sanitizar a identificador Java válido
+    sanitized = re.sub(r'[^A-Za-z0-9_]', '_', action)
+    sanitized = re.sub(r'_+', '_', sanitized).strip('_')
+    return sanitized if sanitized else "__SKIP__"
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,14 @@
+(* break_special_chars.yal
+   ROMPE POTENCIAL: caracteres que son especiales en Java.
+   ¿Qué pasa con \, ", y otros chars que necesitan escape en Java strings? *)
+
+let digit  = ['0'-'9']
+let letter = ['a'-'z''A'-'Z']
+
+rule tokens =
+    letter (letter | digit)*   { return ID }
+  | digit+                      { return NUM }
+  | '\\'                        { return BACKSLASH }
+  | '\t'                        { return TAB }
+  | '\n'                        { return NEWLINE }
+  | [' ']+                     { return SPACE }

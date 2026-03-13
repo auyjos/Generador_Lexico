@@ -195,6 +195,8 @@ def _symbol_str(symbol) -> str:
     if symbol is EPSILON:
         return "eps"
     if isinstance(symbol, int):
+        if symbol == -1:
+            return "EOF"
         c = chr(symbol)
         if c.isprintable() and c != " ":
             return f"'{c}'"

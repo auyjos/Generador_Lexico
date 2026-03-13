@@ -1,0 +1,20 @@
+(* java_calculator.yal — Lexer de una calculadora simple.
+   Buen ejemplo para Java: todos los tokens tienen nombres válidos,
+   acciones limpias con return, whitespace se ignora correctamente. *)
+
+let digit  = ['0'-'9']
+let letter = ['a'-'z''A'-'Z']
+
+rule tokens =
+    digit+                      { return NUMBER }
+  | digit+ '.' digit+          { return FLOAT }
+  | letter (letter | digit)*   { return IDENT }
+  | '+'                         { return PLUS }
+  | '-'                         { return MINUS }
+  | '*'                         { return TIMES }
+  | '/'                         { return DIV }
+  | '('                         { return LPAREN }
+  | ')'                         { return RPAREN }
+  | '='                         { return ASSIGN }
+  | ';'                         { return SEMICOLON }
+  | [' ' '\t' '\n']+           { return WHITESPACE }

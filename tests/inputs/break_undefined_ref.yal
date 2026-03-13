@@ -1,0 +1,10 @@
+(* break_undefined_ref.yal
+   ROMPE: referencia a una definición que no existe.
+   El resolver debería reportar error, no generar código roto. *)
+
+let digit = ['0'-'9']
+
+rule tokens =
+    {digit}+                    { return NUM }
+  | {undefined_ref}+            { return MYSTERY }
+  | [' ' '\t' '\n']+           { return WS }

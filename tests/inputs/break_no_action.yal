@@ -1,0 +1,12 @@
+(* break_no_action.yal
+   ROMPE POTENCIAL: reglas sin acción semántica.
+   ¿Qué pasa si una regla tiene patrón pero no bloque { }? *)
+
+let digit  = ['0'-'9']
+let letter = ['a'-'z''A'-'Z']
+
+rule tokens =
+    digit+                      { return NUM }
+  | letter+                     { return ID }
+  | '+'                         { return PLUS }
+  | [' ' '\t' '\n']+           { }

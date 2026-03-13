@@ -1,0 +1,29 @@
+(* break_overlapping_patterns.yal
+   CASO LÍMITE: patrones que se solapan fuertemente.
+   "if" es tanto keyword como un identificador válido.
+   La precedencia debe ser por orden de aparición en la spec. *)
+
+let digit  = ['0'-'9']
+let letter = ['a'-'z''A'-'Z']
+
+rule tokens =
+    "if"                            { return IF }
+  | "else"                          { return ELSE }
+  | "while"                         { return WHILE }
+  | "return"                        { return RETURN }
+  | "true"                          { return TRUE }
+  | "false"                         { return FALSE }
+  | letter (letter | digit)*       { return IDENT }
+  | digit+                          { return NUMBER }
+  | '='                             { return EQ }
+  | '!'                             { return BANG }
+  | '<'                             { return LT }
+  | '>'                             { return GT }
+  | '+'                             { return PLUS }
+  | '-'                             { return MINUS }
+  | '('                             { return LPAREN }
+  | ')'                             { return RPAREN }
+  | '{'                             { return LBRACE }
+  | '}'                             { return RBRACE }
+  | ';'                             { return SEMI }
+  | [' ' '\t' '\n']+              { return WS }

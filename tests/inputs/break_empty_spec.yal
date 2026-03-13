@@ -1,0 +1,5 @@
+(* break_empty_spec.yal
+   ROMPE: archivo sin reglas. El generador necesita al menos una regla
+   para crear la sección rule. ¿Qué pasa si no hay ninguna? *)
+
+let digit = ['0'-'9']

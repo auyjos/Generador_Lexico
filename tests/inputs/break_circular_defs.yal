@@ -1,0 +1,9 @@
+(* break_circular_defs.yal
+   ROMPE: definiciones circulares.
+   a referencia b, b referencia a. El resolver debería detectar el ciclo. *)
+
+let a = {b} | 'x'
+let b = {a} | 'y'
+
+rule tokens =
+    {a}+   { return TOKEN_A }

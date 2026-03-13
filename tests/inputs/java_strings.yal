@@ -1,0 +1,29 @@
+(* java_strings.yal — Lexer con reconocimiento de strings y chars.
+   Prueba la combinación de comillas y secuencias de escape. *)
+
+let digit   = ['0'-'9']
+let letter  = ['a'-'z''A'-'Z''_']
+let hex     = ['0'-'9''a'-'f''A'-'F']
+
+rule tokens =
+    letter (letter | digit)*       { return IDENT }
+  | digit+                          { return INTEGER }
+  | '+'                             { return PLUS }
+  | '-'                             { return MINUS }
+  | '='                             { return EQ }
+  | '<'                             { return LT }
+  | '>'                             { return GT }
+  | '!'                             { return BANG }
+  | '&'                             { return AMP }
+  | '|'                             { return PIPE }
+  | ':'                             { return COLON }
+  | ';'                             { return SEMI }
+  | '('                             { return LPAREN }
+  | ')'                             { return RPAREN }
+  | '['                             { return LBRACK }
+  | ']'                             { return RBRACK }
+  | '{'                             { return LBRACE }
+  | '}'                             { return RBRACE }
+  | ','                             { return COMMA }
+  | '.'                             { return DOT }
+  | [' ' '\t' '\n']+              { return WS }
