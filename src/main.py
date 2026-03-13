@@ -76,7 +76,7 @@ def main() -> None:
         print(f">>> DFA minimizado guardado en: {auto_paths['min_dfa']}")
 
         # ── Módulo 8: Generador de Código ──
-        lexer_out = os.path.join("output", "lexer.py")
+        lexer_out = os.path.join("output", "Lexer.java")
         print(f"\n>>> Generando lexer en: {lexer_out}")
         generate_lexer(min_dfa, resolved_spec, output_path=lexer_out)
         print(f">>> Lexer generado exitosamente.\n")

@@ -2,13 +2,13 @@
 codegen.py — Módulo 8: Generador de Código
 
 Responsabilidades:
-  - Serializa la tabla de transiciones del DFA minimizado como dict de Python.
-  - Genera el motor next_token() con política de maximal munch.
+  - Serializa la tabla de transiciones del DFA minimizado como Map de Java.
+  - Genera el motor nextToken() con política de maximal munch.
   - Integra las acciones semánticas de la especificación original.
-  - Produce un archivo .py listo para ejecutar como analizador léxico.
+  - Produce un archivo .java listo para compilar como analizador léxico.
 
 Entrada:  DFA minimizado  +  ResolvedSpec
-Salida:   archivo .py del analizador léxico generado
+Salida:   archivo .java del analizador léxico generado
 """
 
 from __future__ import annotations
@@ -37,34 +37,53 @@ class CodeGenError(Exception):
 
 class LexerCodeGenerator:
     """
-    Genera el código fuente del analizador léxico a partir del DFA minimizado.
+    Genera el código fuente Java del analizador léxico a partir del DFA minimizado.
 
     Uso:
         gen = LexerCodeGenerator(min_dfa, resolved_spec)
         code = gen.generate()
-        gen.write("output/lexer.py")
+        gen.write("output/Lexer.java")
     """
 
     def __init__(self, dfa: DFA, spec: ResolvedSpec) -> None:
-        self._dfa = dfa
+        self._dfa  = dfa
         self._spec = spec
 
     # ── API pública ───────────────────────────────────────────────────────────
 
     def generate(self) -> str:
-        """Devuelve el código fuente del lexer como string."""
-        parts: list[str] = []
-        parts.append(self._section_banner())
-        parts.append(self._section_header())
-        parts.append(self._section_transition_table())
-        parts.append(self._section_accept_states())
-        parts.append(self._section_skip_tokens())
-        parts.append(self._section_start_state())
-        parts.append(self._section_token_class())
-        parts.append(self._section_lexer_class())
-        parts.append(self._section_trailer())
-        parts.append(self._section_main())
-        return "\n\n".join(parts)
+        """Devuelve el código fuente Java del lexer como string."""
+        parts: list[str] = [
+            self._section_banner(),
+            self._section_imports(),
+            "public final class Lexer {",
+            "",
+            self._indent(self._section_token_enum()),
+            "",
+            self._indent(self._section_token_class()),
+            "",
+            self._indent(self._section_transition_table()),
+            "",
+            self._indent(self._section_accept_states()),
+            "",
+            self._indent(self._section_skip_tokens()),
+            "",
+            self._indent(self._section_start_state()),
+            "",
+            self._indent(self._section_lexer_fields()),
+            "",
+            self._indent(self._section_constructor()),
+            "",
+            self._indent(self._section_tokenize()),
+            "",
+            self._indent(self._section_next_token()),
+            "",
+            self._indent(self._section_helpers()),
+            "",
+            self._indent(self._section_main()),
+            "}",
+        ]
+        return "\n".join(parts)
 
     def write(self, output_path: str) -> str:
         """Genera el código y lo escribe en output_path. Devuelve la ruta."""
@@ -74,80 +93,142 @@ class LexerCodeGenerator:
             f.write(code)
         return output_path
 
+    # ── Helpers internos ─────────────────────────────────────────────────────
+
+    @staticmethod
+    def _indent(text: str, level: int = 1) -> str:
+        prefix = "    " * level
+        return textwrap.indent(text, prefix)
+
     # ── Secciones del archivo generado ───────────────────────────────────────
 
     def _section_banner(self) -> str:
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ts        = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         spec_name = getattr(self._spec, "source_file", "<spec>")
         return textwrap.dedent(f"""\
-            # =============================================================
-            #  LEXER GENERADO AUTOMÁTICAMENTE
-            #  Generado por: Generador de Analizadores Léxicos
-            #  Fecha       : {ts}
-            #  Especificación: {spec_name}
-            #
-            #  NO EDITAR MANUALMENTE — regenerar desde la especificación .yal
-            # =============================================================
+            // =============================================================
+            //  LEXER GENERADO AUTOMÁTICAMENTE
+            //  Generado por: Generador de Analizadores Léxicos
+            //  Fecha       : {ts}
+            //  Especificación: {spec_name}
+            //
+            //  NO EDITAR MANUALMENTE — regenerar desde la especificación .yal
+            // =============================================================
         """)
 
-    def _section_header(self) -> str:
+    def _section_imports(self) -> str:
         header = (self._spec.header or "").strip()
-        if not header:
-            return "# (sin header)"
-        indented = textwrap.indent(header, "    ")
-        return (
-            "# --- Header ---\n"
-            "try:\n"
-            f"{indented}\n"
-            "except (ImportError, ModuleNotFoundError):\n"
-            "    pass  # modulo del header no disponible en este entorno"
-        )
+        lines: list[str] = [
+            "import java.io.IOException;",
+            "import java.nio.file.Files;",
+            "import java.nio.file.Paths;",
+            "import java.util.ArrayList;",
+            "import java.util.HashMap;",
+            "import java.util.HashSet;",
+            "import java.util.List;",
+            "import java.util.Map;",
+            "import java.util.Set;",
+        ]
+        if header:
+            lines.append("")
+            lines.append(f"// --- Header ---")
+            for h in header.splitlines():
+                lines.append(f"// {h}")
+        lines.append("")
+        return "\n".join(lines)
+
+    def _section_token_enum(self) -> str:
+        tokens: list[str] = []
+        seen: set[str] = set()
+        for state in self._dfa.accept_states:
+            name = _extract_token_name(state.token or "UNKNOWN")
+            if name not in seen:
+                seen.add(name)
+                tokens.append(name)
+        tokens_str = ",\n        ".join(tokens + ["EOF", "ERROR"])
+        return textwrap.dedent(f"""\
+            /** Tipos de tokens reconocidos por el lexer. */
+            public enum TokenType {{
+                {tokens_str}
+            }}
+        """)
+
+    def _section_token_class(self) -> str:
+        return textwrap.dedent("""\
+            /** Representa un token reconocido por el lexer. */
+            public static final class Token {
+
+                public final TokenType type;
+                public final String    value;
+                public final int       line;
+                public final int       column;
+
+                public Token(
+                        final TokenType type,
+                        final String    value,
+                        final int       line,
+                        final int       column) {
+                    this.type   = type;
+                    this.value  = value;
+                    this.line   = line;
+                    this.column = column;
+                }
+
+                @Override
+                public String toString() {
+                    return String.format("Token(%-15s %-20s line=%d col=%d)",
+                            type, "\\\"" + value + "\\\"", line, column);
+                }
+            }
+        """)
 
     def _section_transition_table(self) -> str:
         """
-        Genera la tabla de transiciones del DFA como dict anidado:
-            _TRANS: dict[int, dict[int, int]]
-            _TRANS[estado][ord(char)] = estado_destino
+        Genera la tabla de transiciones como:
+            Map<Integer, Map<Integer, Integer>> TRANS
+            TRANS.get(estado).get(ord_char) = siguiente_estado
         """
-        lines: list[str] = []
-        lines.append("# --- Tabla de transiciones del DFA minimizado ---")
-        lines.append("# _TRANS[estado][ord(char)] = siguiente_estado")
-        lines.append("_TRANS: dict[int, dict[int, int]] = {")
+        lines: list[str] = [
+            "// --- Tabla de transiciones del DFA minimizado ---",
+            "// TRANS.get(estado).get(ord(char)) = siguiente_estado",
+            "private static final Map<Integer, Map<Integer, Integer>> TRANS;",
+            "static {",
+            "    TRANS = new HashMap<>();",
+            "    Map<Integer, Integer> row;",
+        ]
 
         for state in sorted(self._dfa.states, key=lambda s: s.state_id):
             if not state.transitions:
-                lines.append(f"    {state.state_id}: {{}},")
+                lines.append(f"    TRANS.put({state.state_id}, new HashMap<>());")
                 continue
-            # Ordenar por símbolo para reproducibilidad
-            items = sorted(state.transitions.items(), key=lambda x: x[0])
-            inner = ", ".join(
-                f"{sym}: {tgt.state_id}" for sym, tgt in items
-            )
-            lines.append(f"    {state.state_id}: {{{inner}}},")
+            lines.append(f"    row = new HashMap<>();")
+            for sym, tgt in sorted(state.transitions.items()):
+                lines.append(f"    row.put({sym}, {tgt.state_id});")
+            lines.append(f"    TRANS.put({state.state_id}, row);")
 
         lines.append("}")
         return "\n".join(lines)
 
     def _section_accept_states(self) -> str:
         """
-        Genera el dict de estados de aceptación:
-            _ACCEPT[estado] = "nombre_del_token"
+        Genera el mapa de estados de aceptación:
+            Map<Integer, TokenType> ACCEPT
         """
-        lines: list[str] = []
-        lines.append("# --- Estados de aceptación: estado → token ---")
-        lines.append("_ACCEPT: dict[int, str] = {")
-
+        lines: list[str] = [
+            "// --- Estados de aceptación: estado → TokenType ---",
+            "private static final Map<Integer, TokenType> ACCEPT;",
+            "static {",
+            "    ACCEPT = new HashMap<>();",
+        ]
         for state in sorted(self._dfa.accept_states, key=lambda s: s.state_id):
             token = _extract_token_name(state.token or "UNKNOWN")
-            lines.append(f"    {state.state_id}: {token!r},")
-
+            lines.append(f"    ACCEPT.put({state.state_id}, TokenType.{token});")
         lines.append("}")
         return "\n".join(lines)
 
     def _section_skip_tokens(self) -> str:
         """
-        Genera el set de tokens que deben silenciarse (skip).
-        Un token se silencia si su acción no contiene 'return'.
+        Genera el set de tokens silenciados (sin 'return' en su acción).
         """
         skip: list[str] = []
         for state in self._dfa.accept_states:
@@ -155,196 +236,189 @@ class LexerCodeGenerator:
             if action and "return" not in action.lower():
                 skip.append(_extract_token_name(action))
 
-        lines: list[str] = []
-        lines.append("# --- Tokens silenciados (sin return en su acción) ---")
-        if skip:
-            items = ", ".join(repr(t) for t in sorted(set(skip)))
-            lines.append(f"_SKIP: set[str] = {{{items}}}")
-        else:
-            lines.append("_SKIP: set[str] = set()")
+        lines: list[str] = [
+            "// --- Tokens silenciados (sin return en su acción) ---",
+            "private static final Set<TokenType> SKIP;",
+            "static {",
+            "    SKIP = new HashSet<>();",
+        ]
+        for t in sorted(set(skip)):
+            lines.append(f"    SKIP.add(TokenType.{t});")
+        lines.append("}")
         return "\n".join(lines)
 
     def _section_start_state(self) -> str:
-        return f"# --- Estado inicial ---\n_START: int = {self._dfa.start.state_id}"
+        sid = self._dfa.start.state_id
+        return f"// --- Estado inicial ---\nprivate static final int START = {sid};"
 
-    def _section_token_class(self) -> str:
+    def _section_lexer_fields(self) -> str:
         return textwrap.dedent("""\
-            # --- Clase Token ---
-
-            class Token:
-                \"\"\"Representa un token reconocido por el lexer.\"\"\"
-
-                __slots__ = ("type", "value", "line", "column")
-
-                def __init__(self, type_: str, value: str,
-                             line: int = 0, column: int = 0) -> None:
-                    self.type   = type_
-                    self.value  = value
-                    self.line   = line
-                    self.column = column
-
-                def __repr__(self) -> str:
-                    return f"Token({self.type!r}, {self.value!r}, line={self.line})"
+            // --- Campos del lexer ---
+            private final String       source;
+            private       int          pos    = 0;
+            private       int          line   = 1;
+            private       int          col    = 1;
+            private final List<String> errors = new ArrayList<>();
         """)
 
-    def _section_lexer_class(self) -> str:
+    def _section_constructor(self) -> str:
         return textwrap.dedent("""\
-            # --- Motor del Lexer (maximal munch sobre DFA) ---
-
-            class Lexer:
-                \"\"\"
-                Analizador léxico generado.
-
-                Uso:
-                    lexer = Lexer("x = 42 + y")
-                    for tok in lexer.tokenize():
-                        print(tok)
-                \"\"\"
-
-                def __init__(self, text: str) -> None:
-                    self._text   = text
-                    self._pos    = 0       # posición actual en el texto
-                    self._line   = 1
-                    self._col    = 1
-                    self._errors: list[str] = []
-
-                # ── Interfaz pública ──────────────────────────────────────────
-
-                def tokenize(self) -> list[Token]:
-                    \"\"\"Tokeniza todo el texto y devuelve la lista de tokens.\"\"\"
-                    tokens: list[Token] = []
-                    while self._pos < len(self._text):
-                        tok = self._next_token()
-                        if tok is not None:
-                            tokens.append(tok)
-                    if self._errors:
-                        print("\\n[ERRORES LÉXICOS]")
-                        for err in self._errors:
-                            print(" ", err)
-                    return tokens
-
-                @property
-                def errors(self) -> list[str]:
-                    return list(self._errors)
-
-                # ── Motor interno ─────────────────────────────────────────────
-
-                def _next_token(self) -> Token | None:
-                    \"\"\"
-                    Reconoce el siguiente token usando maximal munch.
-
-                    Algoritmo:
-                      1. Partimos del estado inicial del DFA.
-                      2. Consumimos caracteres mientras haya transición válida.
-                      3. Cada vez que llegamos a un estado de aceptación,
-                         guardamos (estado, posición) como 'último aceptante'.
-                      4. Al quedarnos sin transición usamos el último aceptante.
-                      5. Si nunca hubo aceptación → error léxico, avanzar 1 char.
-                    \"\"\"
-                    start_pos   = self._pos
-                    start_line  = self._line
-                    start_col   = self._col
-
-                    state       = _START
-                    last_accept_state: int | None = None
-                    last_accept_pos  : int        = start_pos
-                    last_accept_line : int        = start_line
-                    last_accept_col  : int        = start_col
-
-                    # Verificar si el estado inicial ya es aceptante
-                    if state in _ACCEPT:
-                        last_accept_state = state
-                        last_accept_pos   = self._pos
-                        last_accept_line  = self._line
-                        last_accept_col   = self._col
-
-                    while self._pos < len(self._text):
-                        ch  = self._text[self._pos]
-                        sym = ord(ch)
-
-                        next_state = _TRANS.get(state, {}).get(sym)
-                        if next_state is None:
-                            break   # sin transición → usar último aceptante
-
-                        state = next_state
-                        self._pos += 1
-                        if ch == "\\n":
-                            self._line += 1
-                            self._col = 1
-                        else:
-                            self._col += 1
-
-                        if state in _ACCEPT:
-                            last_accept_state = state
-                            last_accept_pos   = self._pos
-                            last_accept_line  = self._line
-                            last_accept_col   = self._col
-
-                    if last_accept_state is None:
-                        # Error léxico: carácter no reconocido
-                        bad_char = self._text[start_pos]
-                        self._errors.append(
-                            f"Linea {start_line}, col {start_col}: "
-                            f"caracter no reconocido {bad_char!r}"
-                        )
-                        self._pos  = start_pos + 1
-                        self._line = start_line
-                        self._col  = start_col + 1
-                        return None
-
-                    # Retroceder al último punto de aceptación (maximal munch)
-                    self._pos  = last_accept_pos
-                    self._line = last_accept_line
-                    self._col  = last_accept_col
-
-                    lexeme     = self._text[start_pos:last_accept_pos]
-                    token_name = _ACCEPT[last_accept_state]
-
-                    # Silenciar tokens marcados como skip
-                    if token_name in _SKIP:
-                        return None
-
-                    return Token(token_name, lexeme, start_line, start_col)
+            public Lexer(final String source) {
+                this.source = source;
+            }
         """)
 
-    def _section_trailer(self) -> str:
+    def _section_tokenize(self) -> str:
+        return textwrap.dedent("""\
+            /** Tokeniza todo el texto y devuelve la lista de tokens. */
+            public List<Token> tokenize() {
+                final List<Token> tokens = new ArrayList<>();
+                while (pos < source.length()) {
+                    final Token tok = nextToken();
+                    if (tok != null) {
+                        tokens.add(tok);
+                    }
+                }
+                if (!errors.isEmpty()) {
+                    System.err.println("\\n[ERRORES LÉXICOS]");
+                    for (final String err : errors) {
+                        System.err.println("  " + err);
+                    }
+                }
+                return tokens;
+            }
+
+            /** Devuelve una lista inmutable de errores léxicos encontrados. */
+            public List<String> getErrors() {
+                return List.copyOf(errors);
+            }
+        """)
+
+    def _section_next_token(self) -> str:
+        return textwrap.dedent("""\
+            /**
+             * Reconoce el siguiente token usando maximal munch sobre el DFA.
+             *
+             * Algoritmo:
+             *   1. Partir del estado inicial del DFA.
+             *   2. Consumir caracteres mientras haya transición válida.
+             *   3. Cada vez que se llega a un estado de aceptación,
+             *      guardar (estado, posición) como último aceptante.
+             *   4. Al quedarse sin transición, usar el último aceptante.
+             *   5. Si nunca hubo aceptación → error léxico, avanzar 1 char.
+             */
+            private Token nextToken() {
+                final int startPos  = pos;
+                final int startLine = line;
+                final int startCol  = col;
+
+                int  state            = START;
+                int  lastAcceptState  = -1;
+                int  lastAcceptPos    = startPos;
+                int  lastAcceptLine   = startLine;
+                int  lastAcceptCol    = startCol;
+
+                // Verificar si el estado inicial ya es aceptante
+                if (ACCEPT.containsKey(state)) {
+                    lastAcceptState = state;
+                    lastAcceptPos   = pos;
+                    lastAcceptLine  = line;
+                    lastAcceptCol   = col;
+                }
+
+                while (pos < source.length()) {
+                    final char ch  = source.charAt(pos);
+                    final int  sym = (int) ch;
+
+                    final Map<Integer, Integer> row = TRANS.get(state);
+                    if (row == null || !row.containsKey(sym)) {
+                        break; // sin transición → usar último aceptante
+                    }
+
+                    state = row.get(sym);
+                    pos++;
+                    if (ch == '\\n') {
+                        line++;
+                        col = 1;
+                    } else {
+                        col++;
+                    }
+
+                    if (ACCEPT.containsKey(state)) {
+                        lastAcceptState = state;
+                        lastAcceptPos   = pos;
+                        lastAcceptLine  = line;
+                        lastAcceptCol   = col;
+                    }
+                }
+
+                if (lastAcceptState == -1) {
+                    // Error léxico: carácter no reconocido
+                    final char bad = source.charAt(startPos);
+                    errors.add(String.format(
+                            "Linea %d, col %d: caracter no reconocido '%c'",
+                            startLine, startCol, bad));
+                    pos  = startPos + 1;
+                    line = startLine;
+                    col  = startCol + 1;
+                    return null;
+                }
+
+                // Retroceder al último punto de aceptación (maximal munch)
+                pos  = lastAcceptPos;
+                line = lastAcceptLine;
+                col  = lastAcceptCol;
+
+                final String    lexeme    = source.substring(startPos, lastAcceptPos);
+                final TokenType tokenType = ACCEPT.get(lastAcceptState);
+
+                // Silenciar tokens marcados como skip
+                if (SKIP.contains(tokenType)) {
+                    return null;
+                }
+
+                return new Token(tokenType, lexeme, startLine, startCol);
+            }
+        """)
+
+    def _section_helpers(self) -> str:
         trailer = (self._spec.trailer or "").strip()
-        if not trailer:
-            return "# (sin trailer)"
-        return f"# --- Trailer ---\n{trailer}"
+        comment = ""
+        if trailer:
+            comment = f"// --- Trailer ---\n// {trailer}\n"
+        return comment
 
     def _section_main(self) -> str:
         return textwrap.dedent("""\
-            # --- Punto de entrada ---
+            // --- Punto de entrada ---
+            public static void main(final String[] args) throws IOException {
+                if (args.length < 1) {
+                    System.err.println("Uso: java Lexer <archivo.txt>");
+                    System.exit(1);
+                }
 
-            if __name__ == "__main__":
-                import sys as _sys
+                final String source = Files.readString(Paths.get(args[0]));
+                System.out.printf(">>> Analizando: %s%n%n", args[0]);
 
-                if len(_sys.argv) < 2:
-                    print("Uso: python lexer.py <archivo.txt>")
-                    _sys.exit(1)
+                final Lexer       lexer  = new Lexer(source);
+                final List<Token> tokens = lexer.tokenize();
 
-                _input_file = _sys.argv[1]
-                try:
-                    with open(_input_file, encoding="utf-8") as _f:
-                        _source = _f.read()
-                except FileNotFoundError:
-                    print(f"[ERROR] Archivo no encontrado: {_input_file!r}")
-                    _sys.exit(1)
+                System.out.printf("%-20s %-25s %5s  %4s%n",
+                        "TOKEN", "LEXEMA", "LINEA", "COL");
+                System.out.println("-".repeat(60));
+                for (final Token tok : tokens) {
+                    System.out.printf("%-20s %-25s %5d  %4d%n",
+                            tok.type, "\\"" + tok.value + "\\"",
+                            tok.line, tok.column);
+                }
 
-                print(f">>> Analizando: {_input_file}\\n")
-                _lexer  = Lexer(_source)
-                _tokens = _lexer.tokenize()
-
-                print(f"{'TOKEN':<20} {'LEXEMA':<20} {'LINEA':>5}  {'COL':>4}")
-                print("-" * 55)
-                for _tok in _tokens:
-                    print(f"{_tok.type:<20} {_tok.value!r:<20} {_tok.line:>5}  {_tok.column:>4}")
-
-                print(f"\\n>>> Total tokens: {len(_tokens)}")
-                if _lexer.errors:
-                    print(f">>> Errores lexicos: {len(_lexer.errors)}")
-                    _sys.exit(1)
+                System.out.printf("%n>>> Total tokens: %d%n", tokens.size());
+                if (!lexer.getErrors().isEmpty()) {
+                    System.out.printf(">>> Errores lexicos: %d%n",
+                            lexer.getErrors().size());
+                    System.exit(1);
+                }
+            }
         """)
 
 
@@ -364,12 +438,10 @@ def _extract_token_name(action: str) -> str:
         "skip"               →  "skip"
     """
     action = action.strip()
-    lower = action.lower()
+    lower  = action.lower()
     if lower.startswith("return"):
-        rest = action[6:].strip()
-        # Tomar solo la primera palabra (por si hay expresión compleja)
+        rest  = action[6:].strip()
         token = rest.split()[0] if rest.split() else action
-        # Quitar punto y coma si lo hay
         return token.rstrip(";")
     return action
 
@@ -382,15 +454,15 @@ def _extract_token_name(action: str) -> str:
 def generate_lexer(
     dfa: DFA,
     spec: ResolvedSpec,
-    output_path: str = "output/lexer.py",
+    output_path: str = "output/Lexer.java",
 ) -> str:
     """
-    Genera el analizador léxico y lo escribe en output_path.
+    Genera el analizador léxico Java y lo escribe en output_path.
 
     Parámetros:
         dfa         — DFA minimizado (salida de HopcroftMinimizer)
         spec        — especificación resuelta (salida de DefinitionResolver)
-        output_path — ruta del archivo .py a generar
+        output_path — ruta del archivo .java a generar
 
     Retorna:
         Ruta del archivo generado.

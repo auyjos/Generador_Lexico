@@ -31,23 +31,31 @@ from src.lexer.regex_parser import (
 )
 from src.lexer.resolver import ResolvedRule, ResolvedSpec
 
-# ── Paleta de colores por tipo de nodo ───────────────────────────────────────
+# ── Fuente manuscrita (GoodNotes / lapiz) ────────────────────────────────────
+# Prioridad: Segoe Print (Windows) → Comic Sans MS → Sans
+_HAND_FONT = "Segoe Print"
+
+# ── Paleta de colores pastel estilo GoodNotes ─────────────────────────────────
+# Todos los nodos son círculos diferenciados por color pastel + borde grueso
 
 _NODE_STYLE: dict[type, dict[str, str]] = {
-    LiteralNode:   {"shape": "ellipse",   "fillcolor": "#AED6F1", "style": "filled"},
-    CharClassNode: {"shape": "ellipse",   "fillcolor": "#A9DFBF", "style": "filled"},
-    WildcardNode:  {"shape": "ellipse",   "fillcolor": "#F9E79F", "style": "filled"},
-    EofNode:       {"shape": "ellipse",   "fillcolor": "#F1948A", "style": "filled"},
-    RefNode:       {"shape": "ellipse",   "fillcolor": "#D7BDE2", "style": "filled"},
-    ConcatNode:    {"shape": "rectangle", "fillcolor": "#FDFEFE", "style": "filled,rounded"},
-    UnionNode:     {"shape": "rectangle", "fillcolor": "#FDFEFE", "style": "filled,rounded"},
-    StarNode:      {"shape": "diamond",   "fillcolor": "#FAD7A0", "style": "filled"},
-    PlusNode:      {"shape": "diamond",   "fillcolor": "#FAD7A0", "style": "filled"},
-    QuestionNode:  {"shape": "diamond",   "fillcolor": "#FAD7A0", "style": "filled"},
-    DiffNode:      {"shape": "rectangle", "fillcolor": "#FDFEFE", "style": "filled,rounded"},
+    # Operadores binarios
+    ConcatNode:    {"shape": "circle", "style": "filled", "fillcolor": "#C8E6FA", "color": "#4A90C4", "fontcolor": "#1A3A5C", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"},
+    UnionNode:     {"shape": "circle", "style": "filled", "fillcolor": "#FAC8C8", "color": "#C0504D", "fontcolor": "#5C1A1A", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"},
+    DiffNode:      {"shape": "circle", "style": "filled", "fillcolor": "#E8D5F5", "color": "#8B5CA8", "fontcolor": "#3D1A5C", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"},
+    # Operadores unarios
+    StarNode:      {"shape": "circle", "style": "filled", "fillcolor": "#FFE8B8", "color": "#D4860A", "fontcolor": "#5C3800", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"},
+    PlusNode:      {"shape": "circle", "style": "filled", "fillcolor": "#FFE8B8", "color": "#D4860A", "fontcolor": "#5C3800", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"},
+    QuestionNode:  {"shape": "circle", "style": "filled", "fillcolor": "#FFE8B8", "color": "#D4860A", "fontcolor": "#5C3800", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"},
+    # Hojas terminales
+    LiteralNode:   {"shape": "circle", "style": "filled", "fillcolor": "#C8F5DA", "color": "#2E8B57", "fontcolor": "#0A3D1F", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"},
+    CharClassNode: {"shape": "circle", "style": "filled", "fillcolor": "#C8F5DA", "color": "#2E8B57", "fontcolor": "#0A3D1F", "width": "0.85", "fixedsize": "true", "penwidth": "2.2"},
+    WildcardNode:  {"shape": "circle", "style": "filled", "fillcolor": "#C8F5DA", "color": "#2E8B57", "fontcolor": "#0A3D1F", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"},
+    EofNode:       {"shape": "circle", "style": "filled", "fillcolor": "#FAD5D5", "color": "#922B21", "fontcolor": "#5C0A0A", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"},
+    RefNode:       {"shape": "circle", "style": "filled", "fillcolor": "#D5EAF5", "color": "#4A90C4", "fontcolor": "#1A3A5C", "width": "0.85", "fixedsize": "true", "penwidth": "2.2"},
 }
 
-_DEFAULT_STYLE = {"shape": "ellipse", "fillcolor": "#ECF0F1", "style": "filled"}
+_DEFAULT_STYLE = {"shape": "circle", "style": "filled", "fillcolor": "#EDEDED", "color": "#888888", "width": "0.65", "fixedsize": "true", "penwidth": "2.2"}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -83,12 +91,16 @@ def render_ast(
             "label": title,
             "labelloc": "t",
             "fontsize": "14",
-            "fontname": "Helvetica",
+            "fontname": _HAND_FONT,
+            "fontcolor": "#2D2D2D",
+            "bgcolor": "#FDFCF5",
             "rankdir": "TB",
-            "splines": "ortho",
+            "splines": "line",
+            "nodesep": "0.5",
+            "ranksep": "0.7",
         },
-        node_attr={"fontname": "Helvetica", "fontsize": "11"},
-        edge_attr={"fontname": "Helvetica", "fontsize": "9"},
+        node_attr={"fontname": _HAND_FONT, "fontsize": "11"},
+        edge_attr={"color": "#3D3D3D", "arrowsize": "0.8", "penwidth": "1.8"},
     )
 
     counter = _Counter()
@@ -120,34 +132,50 @@ def render_resolved_spec(
     dot = graphviz.Digraph(
         name="AST_Lexico",
         graph_attr={
-            "label": "AST Lexico — Especificacion Resuelta",
-            "labelloc": "t",
-            "fontsize": "16",
-            "fontname": "Helvetica",
             "rankdir": "TB",
-            "compound": "true",
-            "newrank": "true",
+            "splines": "line",
+            "nodesep": "0.5",
+            "ranksep": "0.75",
+            "bgcolor": "#FDFCF5",
+            "fontname": _HAND_FONT,
         },
-        node_attr={"fontname": "Helvetica", "fontsize": "11"},
-        edge_attr={"fontname": "Helvetica", "fontsize": "9"},
+        node_attr={"fontname": _HAND_FONT, "fontsize": "11"},
+        edge_attr={"color": "#3D3D3D", "arrowsize": "0.8", "penwidth": "1.8"},
     )
 
     counter = _Counter()
 
+    # ── Definiciones expandidas ──
+    for name in spec.topo_order:
+        ast = spec.resolved_defs[name]
+        # Nodo título de la definición
+        title_id = counter.next()
+        dot.node(
+            title_id,
+            label=f"let {name}",
+            shape="plaintext",
+            fontsize="14",
+            fontname=_HAND_FONT,
+            fontcolor="#2E6DA4",
+        )
+        root_id = _add_node(dot, ast, counter)
+        dot.edge(title_id, root_id, style="dashed", color="#2E6DA4",
+                 arrowhead="none", penwidth="1.5")
+
     # ── Reglas de token ──
     for rule in spec.rules:
-        cluster_name = f"cluster_rule_{rule.order}"
-        label = f"Regla [{rule.order}]: {rule.raw_pattern}\\n{{ {rule.action} }}"
-        with dot.subgraph(name=cluster_name) as sub:
-            sub.attr(
-                label=label,
-                style="filled,rounded",
-                fillcolor="#EAFAF1",
-                color="#1E8449",
-                fontsize="11",
-                fontname="Helvetica",
-            )
-            _add_node(sub, rule.pattern_ast, counter)
+        title_id = counter.next()
+        dot.node(
+            title_id,
+            label=f"[{rule.order}]  {rule.action}",
+            shape="plaintext",
+            fontsize="13",
+            fontname=_HAND_FONT,
+            fontcolor="#1E6B3C",
+        )
+        root_id = _add_node(dot, rule.pattern_ast, counter)
+        dot.edge(title_id, root_id, style="dashed", color="#1E6B3C",
+                 arrowhead="none", penwidth="1.5")
 
     out_path = os.path.join(output_dir, "ast_lexico")
     rendered = dot.render(filename=out_path, format=fmt, cleanup=True)
@@ -173,31 +201,30 @@ def _node_label(node: ASTNode) -> str:
     if isinstance(node, LiteralNode):
         ch = chr(node.value)
         display = repr(ch) if not ch.isprintable() or ch == " " else ch
-        return f"CHAR\n{display}"
+        return f"'{display}'"
     if isinstance(node, CharClassNode):
         neg = "^" if node.negated else ""
         chars = sorted(node.chars)
-        # Mostrar rangos compactos
         ranges = _compact_ranges(chars)
-        return f"CLASS\n[{neg}{ranges}]"
+        return f"[{neg}{ranges}]"
     if isinstance(node, WildcardNode):
-        return "ANY\n_"
+        return "."
     if isinstance(node, EofNode):
         return "EOF"
     if isinstance(node, RefNode):
-        return f"REF\n{node.name}"
+        return f"@ {node.name}"
     if isinstance(node, ConcatNode):
-        return "CONCAT\n·"
+        return "·"
     if isinstance(node, UnionNode):
-        return "UNION\n|"
+        return "|"
     if isinstance(node, StarNode):
-        return "STAR\n*"
+        return "*"
     if isinstance(node, PlusNode):
-        return "PLUS\n+"
+        return "+"
     if isinstance(node, QuestionNode):
-        return "OPT\n?"
+        return "?"
     if isinstance(node, DiffNode):
-        return "DIFF\n#"
+        return "#"
     return type(node).__name__
 
 
@@ -215,8 +242,8 @@ def _add_node(dot: graphviz.Digraph, node: ASTNode, counter: _Counter) -> str:
     if isinstance(node, (ConcatNode, UnionNode, DiffNode)):
         left_id  = _add_node(dot, node.left,  counter)
         right_id = _add_node(dot, node.right, counter)
-        dot.edge(node_id, left_id,  label="L")
-        dot.edge(node_id, right_id, label="R")
+        dot.edge(node_id, left_id)
+        dot.edge(node_id, right_id)
 
     # Nodos unarios
     elif isinstance(node, (StarNode, PlusNode, QuestionNode)):
