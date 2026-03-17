@@ -131,10 +131,14 @@ class LexerCodeGenerator:
             "import java.util.Set;",
         ]
         if header:
-            lines.append("")
-            lines.append(f"// --- Header ---")
-            for h in header.splitlines():
-                lines.append(f"// {h}")
+            clean = _strip_ocaml_comments(header)
+            if clean:
+                lines.append("")
+                lines.append("// --- Header ---")
+                for h in clean.splitlines():
+                    stripped = h.strip()
+                    if stripped:
+                        lines.append(stripped)
         lines.append("")
         return "\n".join(lines)
 
@@ -229,13 +233,15 @@ class LexerCodeGenerator:
 
     def _section_skip_tokens(self) -> str:
         """
-        Genera el set de tokens silenciados (sin 'return' en su acción).
+        Genera el set de tokens silenciados (acción vacía en la especificación).
         """
         skip: list[str] = []
         for state in self._dfa.accept_states:
             action = (state.token or "").strip()
-            if action and "return" not in action.lower():
-                skip.append(_extract_token_name(action))
+            if not action:
+                # Acción vacía → token silenciado; usar mismo nombre que enum/accept
+                name = _extract_token_name(state.token or "UNKNOWN")
+                skip.append(name)
 
         lines: list[str] = [
             "// --- Tokens silenciados (sin return en su acción) ---",
@@ -384,10 +390,18 @@ class LexerCodeGenerator:
 
     def _section_helpers(self) -> str:
         trailer = (self._spec.trailer or "").strip()
-        comment = ""
-        if trailer:
-            comment = f"// --- Trailer ---\n// {trailer}\n"
-        return comment
+        if not trailer:
+            return ""
+        clean = _strip_ocaml_comments(trailer)
+        if not clean:
+            return ""
+        lines = ["// --- Trailer ---"]
+        for t in clean.splitlines():
+            stripped = t.strip()
+            if stripped:
+                lines.append(stripped)
+        lines.append("")
+        return "\n".join(lines)
 
     def _section_main(self) -> str:
         return textwrap.dedent("""\
@@ -426,6 +440,27 @@ class LexerCodeGenerator:
 # ══════════════════════════════════════════════════════════════════════════════
 #  Utilidades internas
 # ══════════════════════════════════════════════════════════════════════════════
+
+
+def _strip_ocaml_comments(text: str) -> str:
+    """Elimina comentarios estilo OCaml (* ... *) de una cadena, soportando anidamiento."""
+    result: list[str] = []
+    i = 0
+    depth = 0
+    while i < len(text):
+        if i + 1 < len(text) and text[i] == '(' and text[i + 1] == '*':
+            depth += 1
+            i += 2
+            continue
+        if i + 1 < len(text) and text[i] == '*' and text[i + 1] == ')':
+            if depth > 0:
+                depth -= 1
+            i += 2
+            continue
+        if depth == 0:
+            result.append(text[i])
+        i += 1
+    return ''.join(result).strip()
 
 
 def _extract_token_name(action: str) -> str:

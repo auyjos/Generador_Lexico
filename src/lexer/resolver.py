@@ -376,17 +376,10 @@ class DefinitionResolver:
     def _phase4_validate_rules(self, rules: list[ResolvedRule]) -> None:
         """
         Para cada regla verifica:
-          - La acción semántica no está vacía.
           - No quedaron RefNodes sin expandir (post-condición de integridad).
+        Nota: acciones vacías son válidas (significan "saltar este token").
         """
         for rule in rules:
-            if not rule.action.strip():
-                raise ResolverError(
-                    f"La regla [{rule.order}] no tiene acción semántica: "
-                    f"{rule.raw_pattern!r}",
-                    line=rule.line_number,
-                )
-
             residual = _collect_refs(rule.pattern_ast)
             if residual:
                 # Esto indicaría un bug interno del resolvedor
